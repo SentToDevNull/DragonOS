@@ -153,7 +153,7 @@ chmod -v 600  /var/log/btmp
 
 if [ ! -f $BLOGDIR/kernelheaders1.txt ]; then
 rm -rf linux*/
-tar xvJf linux*.xz
+bash extract.sh linux
 cd linux*/
 make mrproper
 make INSTALL_HDR_PATH=dest headers_install
@@ -172,7 +172,7 @@ fi
 
 if [ ! -f $BLOGDIR/manpages1.txt ]; then
 rm -rf man-pages*/
-tar xvJf man-pages*.xz
+bash extract.sh man-pages
 cd man-pages*/
 make install
 cd ..
@@ -188,10 +188,11 @@ fi
 
 if [ ! -f $BLOGDIR/glibc1.txt ]; then
 rm -rf glibc*/
-tar xvJf glibc*.xz
+bash extract.sh glibc
 cd glibc*/
 # applying patch
-patch -Np1 -i ../glibc-2.25-fhs-1.patch
+#TODO: replace "2.26" with glob pattern
+patch -Np1 -i ../glibc-2.26-fhs-1.patch
 # making a symlink for LSB compliance and a compatibility symlink for 
 #   x86_64
 case $(uname -m) in
@@ -203,7 +204,7 @@ case $(uname -m) in
 esac
 mkdir build && cd build
 ../configure --prefix=/usr                                               \
-             --enable-kernel=2.6.32                                      \
+             --enable-kernel=3.2                                         \
              --enable-obsolete-rpc                                       \
              --enable-stack-protector=strong                             \
              libc_cv_slibdir=/lib
@@ -262,7 +263,9 @@ rpc: files
 # End /etc/nsswitch.conf
 EOF
 # set up time zone data
-tar -xf ../../tzdata2016j.tar.gz
+#TODO: replace "tzdata2017b" with a glob pattern
+#tar -xf ../../tzdata2017b.tar.gz
+bash extract.sh tzdata2017b
 ZONEINFO=/usr/share/zoneinfo
 mkdir -pv $ZONEINFO/{posix,right}
 for tz in etcetera southamerica northamerica europe africa antarctica    \
@@ -320,7 +323,7 @@ fi
 
 if [ ! -f $BLOGDIR/zlib1.txt ]; then
 rm -rf zlib*/
-tar xvJf zlib*.xz
+bash extract.sh zlib
 cd zlib*/
 ./configure --prefix=/usr
 make
@@ -340,7 +343,7 @@ fi
 
 if [ ! -f $BLOGDIR/file1.txt ]; then
 rm -rf file*/
-tar xvzf file*.gz
+bash extract.sh file
 cd file*/
 ./configure --prefix=/usr
 make
@@ -352,13 +355,98 @@ fi
 
 #------------------------------------------------------------------------#
 #                                                                        #
+#                         Installing READLINE.                           #
+#                                                                        #
+#------------------------------------------------------------------------#
+
+if [ ! -f $BLOGDIR/readline1.txt ]; then
+rm -rf readline*/
+bash extract.sh readline
+cd readline*/
+sed -i '/MV.*old/d' Makefile.in
+sed -i '/{OLDSUFF}/c:' support/shlib-install
+#TODO: replace "7.0" with glob pattern
+./configure --prefix=/usr                                                \
+            --disable-static                                             \
+            --docdir=/usr/share/doc/readline-7.0
+make SHLIB_LIBS=-lncurses
+make SHLIB_LIBS=-lncurses install
+mv -v /usr/lib/lib{readline,history}.so.* /lib
+ln -sfv ../../lib/$(readlink /usr/lib/libreadline.so)                    \
+        /usr/lib/libreadline.so
+ln -sfv ../../lib/$(readlink /usr/lib/libhistory.so )                    \
+        /usr/lib/libhistory.so
+# for documentation
+#TODO: replace "7.0" with glob pattern
+install -v -m644 doc/*.{ps,pdf,html,dvi} /usr/share/doc/readline-7.0
+cd ..
+rm -rf readline*/
+touch $BLOGDIR/readline1.txt
+fi
+
+#------------------------------------------------------------------------#
+#                                                                        #
+#                            Installing M4.                              #
+#                                                                        #
+#------------------------------------------------------------------------#
+
+if [ ! -f $BLOGDIR/mfour1.txt ]; then
+rm -rf m4*/
+bash extract.sh m4
+cd m4*/
+./configure --prefix=/usr
+make
+make install
+cd ..
+rm -rf m4*/
+touch $BLOGDIR/mfour1.txt
+fi
+
+#------------------------------------------------------------------------#
+#                                                                        #
+#                            Installing BC.                              #
+#                                                                        #
+#------------------------------------------------------------------------#
+
+if [ ! -f $BLOGDIR/bc1.txt ]; then
+rm -rf bc*/
+bash extract.sh bc
+cd bc*/
+cat > bc/fix-libmath_h << "EOF"
+#! /bin/bash
+sed -e '1 s/^/{"/'                                                       \
+    -e 's/$/",/'                                                         \
+    -e '2,$ s/^/"/'                                                      \
+    -e '$ d'                                                             \
+    -i libmath.h
+sed -e '$ s/$/0}/'                                                       \
+    -i libmath.h
+EOF
+#TODO: replace the "6" with a glob pattern
+ln -sv /tools/lib/libncursesw.so.6 /usr/lib/libncursesw.so.6
+ln -sfv libncurses.so.6 /usr/lib/libncurses.so
+#fix an error in configure due to missing files early on
+sed -i -e '/flex/s/as_fn_error/: ;; # &/' configure
+./configure --prefix=/usr                                                \
+            --with-readline                                              \
+            --mandir=/usr/share/man                                      \
+            --infodir=/usr/share/info
+make
+make install
+cd ..
+rm -rf bc*/
+touch $BLOGDIR/bc1.txt
+fi
+
+#------------------------------------------------------------------------#
+#                                                                        #
 #                         Installing BINUTILS.                           #
 #                                                                        #
 #------------------------------------------------------------------------#
 
 if [ ! -f $BLOGDIR/binutils1.txt ]; then
 rm -rf binutils*/
-tar xvjf binutils*.bz2
+bash extract.sh binutils
 cd binutils*/
 mkdir build && cd build
 ../configure --prefix=/usr                                               \
@@ -383,8 +471,9 @@ fi
 
 if [ ! -f $BLOGDIR/gmp1.txt ]; then
 rm -rf gmp*/
-tar xvJf gmp*.xz
+bash extract.sh gmp
 cd gmp*/
+#TODO: replace "gmp-6.1.2" with glob pattern
 ./configure --prefix=/usr                                                \
             --enable-cxx                                                 \
             --disable-static                                             \
@@ -406,8 +495,9 @@ fi
 
 if [ ! -f $BLOGDIR/mpfr1.txt ]; then
 rm -rf mpfr*/
-tar xvJf mpfr*.xz
+bash extract.sh mpfr
 cd mpfr*/
+#TODO: replace "mpfr-3.1.5" with glob pattern
 ./configure --prefix=/usr                                                \
             --disable-static                                             \
             --enable-thread-safe                                         \
@@ -429,8 +519,9 @@ fi
 
 if [ ! -f $BLOGDIR/mpc1.txt ]; then
 rm -rf mpc*/
-tar xvzf mpc*.gz
+bash extract.sh mpc
 cd mpc*/
+#TODO: replace "mpc-1.0.3" with glob pattern
 ./configure --prefix=/usr                                                \
             --disable-static                                             \
             --docdir=/usr/share/doc/mpc-1.0.3
@@ -451,7 +542,7 @@ fi
 
 if [ ! -f $BLOGDIR/gcc1.txt ]; then
 rm -rf gcc*/
-tar xvjf gcc*.bz2
+bash extract.sh gcc
 cd gcc*/
 # changes default directory name for 64-bit libraries to lib from lib64
 case $(uname -m) in
@@ -471,7 +562,8 @@ make install
 ln -fsv ../usr/bin/cpp /lib
 ln -fsv gcc /usr/bin/cc
 install -v -dm755 /usr/lib/bfd-plugins
-ln -fsv ../../libexec/gcc/$(gcc -dumpmachine)/6.3.0/liblto_plugin.so     \
+#TODO: replace "7.2.0" with glob pattern
+ln -fsv ../../libexec/gcc/$(gcc -dumpmachine)/7.2.0/liblto_plugin.so     \
         /usr/lib/bfd-plugins/
 # correcting a misplaced file
 mkdir -pv /usr/share/gdb/auto-load/usr/lib
@@ -489,9 +581,10 @@ fi
 
 if [ ! -f $BLOGDIR/bziptwo1.txt ]; then
 rm -rf bzip2*/
-tar xvzf bzip2*.gz
+bash extract.sh bzip2
 cd bzip2*/
 # documentation patch
+#TODO: replace "1.0.6" with glob pattern
 patch -Np1 -i ../bzip2-1.0.6-install_docs-1.patch
 # for relative symlinks
 sed -i 's@\(ln -s -f \)$(PREFIX)/bin/@\1@' Makefile
@@ -515,19 +608,20 @@ fi
 
 #------------------------------------------------------------------------#
 #                                                                        #
-#                          Installing BZIP2.                             #
+#                        Installing PKG-CONFIG.                          #
 #                                                                        #
 #------------------------------------------------------------------------#
 
 if [ ! -f $BLOGDIR/pkg-config1.txt ]; then
 rm -rf pkg-config*/
-tar xvzf pkg-config*.gz
+bash extract.sh pkg-config
 cd pkg-config*/
+#TODO: replace "0.29.2" with glob pattern
 ./configure --prefix=/usr                                                \
             --with-internal-glib                                         \
             --disable-compile-warnings                                   \
             --disable-host-tool                                          \
-            --docdir=/usr/share/doc/pkg-config-0.29.1
+            --docdir=/usr/share/doc/pkg-config-0.29.2
 make
 make install
 cd ..
@@ -543,7 +637,7 @@ fi
 
 if [ ! -f $BLOGDIR/ncurses1.txt ]; then
 rm -rf ncurses*/
-tar xvzf ncurses*.gz
+bash extract.sh ncurses
 cd ncurses*/
 # no unnecessary static libs
 sed -i '/LIBTOOL_INSTALL/d' c++/Makefile.in
@@ -557,6 +651,7 @@ sed -i '/LIBTOOL_INSTALL/d' c++/Makefile.in
 make
 make install
 # moving shared libraries to the /lib directory
+#TODO: perhaps place glob pattern earlier by removing the "6"
 mv -v /usr/lib/libncursesw.so.6* /lib
 # recreate symlinks after moving
 ln -fsv ../../lib/$(readlink /usr/lib/libncursesw.so)                    \
@@ -572,6 +667,7 @@ rm -vf                     /usr/lib/libcursesw.so
 echo "INPUT(-lncursesw)" > /usr/lib/libcursesw.so
 ln -fsv libncurses.so      /usr/lib/libcurses.so
 # install ncurses documentation
+#TODO: replace "6.0" with glob pattern
 mkdir -v       /usr/share/doc/ncurses-6.0
 cp -v -R doc/* /usr/share/doc/ncurses-6.0
 # to include non-wide-character libraries
@@ -583,6 +679,7 @@ make distclean
             --without-cxx-binding                                        \
             --with-abi-version=5 
 make sources libs
+#TODO: perhaps place glob pattern earlier by removing the 5
 cp -av lib/lib*.so.5* /usr/lib
 cd ..
 rm -rf ncurses*/
@@ -597,7 +694,7 @@ fi
 
 if [ ! -f $BLOGDIR/attr1.txt ]; then
 rm -rf attr*/
-tar xvzf attr*.gz
+bash extract.sh attr
 cd attr*/
 sed -i -e 's|/@pkg_name@|&-@pkg_version@|' include/builddefs.in
 sed -i -e "/SUBDIRS/s|man[25]||g" man/Makefile
@@ -621,7 +718,7 @@ fi
 
 if [ ! -f $BLOGDIR/acl1.txt ]; then
 rm -rf acl*/
-tar xvzf acl*.gz
+bash extract.sh acl
 cd acl*/
 sed -i -e 's|/@pkg_name@|&-@pkg_version@|' include/builddefs.in
 # fixing some broken crap
@@ -649,7 +746,7 @@ fi
 
 if [ ! -f $BLOGDIR/libcap1.txt ]; then
 rm -rf libcap*/
-tar xvJf libcap*.xz
+bash extract.sh libcap
 cd libcap*/
 sed -i '/install.*STALIBNAME/d' libcap/Makefile
 make
@@ -670,7 +767,7 @@ fi
 
 if [ ! -f $BLOGDIR/sed1.txt ]; then
 rm -rf sed*/
-tar xvJf sed*.xz
+bash extract.sh sed
 cd sed*/
 sed -i 's/usr/tools/'       build-aux/help2man
 sed -i 's/panic-tests.sh//' Makefile.in
@@ -678,6 +775,7 @@ sed -i 's/panic-tests.sh//' Makefile.in
 make
 make html
 make install
+#TODO: replace "4.4" with glob pattern
 install -d -m755           /usr/share/doc/sed-4.4
 install -m644 doc/sed.html /usr/share/doc/sed-4.4
 cd ..
@@ -693,7 +791,7 @@ fi
 
 if [ ! -f $BLOGDIR/shadow1.txt ]; then
 rm -rf shadow*/
-tar xvJf shadow*.xz
+bash extract.sh shadow
 cd shadow*/
 sed -i 's/groups$(EXEEXT) //' src/Makefile.in
 find man -name Makefile.in -exec sed -i 's/groups\.1 / /'   {} \;
@@ -749,7 +847,7 @@ fi
 
 if [ ! -f $BLOGDIR/psmisc1.txt ]; then
 rm -rf psmisc*/
-tar xvzf psmisc*.gz
+bash extract.sh psmisc
 cd psmisc*/
 ./configure --prefix=/usr
 make
@@ -769,7 +867,7 @@ fi
 
 if [ ! -f $BLOGDIR/iana-etc1.txt ]; then
 rm -rf iana-etc*/
-tar xvjf iana-etc*.bz2
+bash extract.sh iana-etc
 cd iana-etc*/
 make
 make install
@@ -780,32 +878,15 @@ fi
 
 #------------------------------------------------------------------------#
 #                                                                        #
-#                            Installing M4.                              #
-#                                                                        #
-#------------------------------------------------------------------------#
-
-if [ ! -f $BLOGDIR/mfour1.txt ]; then
-rm -rf m4*/
-tar xvJf m4*.xz
-cd m4*/
-./configure --prefix=/usr
-make
-make install
-cd ..
-rm -rf m4*/
-touch $BLOGDIR/mfour1.txt
-fi
-
-#------------------------------------------------------------------------#
-#                                                                        #
 #                          Installing BISON.                             #
 #                                                                        #
 #------------------------------------------------------------------------#
 
 if [ ! -f $BLOGDIR/bison1.txt ]; then
 rm -rf bison*/
-tar xvJf bison*.xz
+bash extract.sh bison
 cd bison*/
+#TODO: replace "3.0.4" with glob pattern
 ./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.0.4
 make
 make install
@@ -822,10 +903,11 @@ fi
 
 if [ ! -f $BLOGDIR/flex1.txt ]; then
 rm -rf flex*/
-tar xvzf flex*.gz
+bash extract.sh flex
 cd flex*/
+#TODO: replace "2.6.4" with glob pattern
 HELP2MAN=/tools/bin/true                                                 \
-./configure --prefix=/usr --docdir=/usr/share/doc/flex-2.6.3
+./configure --prefix=/usr --docdir=/usr/share/doc/flex-2.6.4
 make
 make install
 ln -sfv flex /usr/bin/lex
@@ -842,7 +924,7 @@ fi
 
 if [ ! -f $BLOGDIR/grep1.txt ]; then
 rm -rf grep*/
-tar xvJf grep*.xz
+bash extract.sh grep
 cd grep*/
 ./configure --prefix=/usr --bindir=/bin
 make
@@ -854,43 +936,16 @@ fi
 
 #------------------------------------------------------------------------#
 #                                                                        #
-#                         Installing READLINE.                           #
-#                                                                        #
-#------------------------------------------------------------------------#
-
-if [ ! -f $BLOGDIR/readline1.txt ]; then
-rm -rf readline*/
-tar xvzf readline*.gz
-cd readline*/
-sed -i '/MV.*old/d' Makefile.in
-sed -i '/{OLDSUFF}/c:' support/shlib-install
-./configure --prefix=/usr                                                \
-            --disable-static                                             \
-            --docdir=/usr/share/doc/readline-7.0
-make SHLIB_LIBS=-lncurses
-make SHLIB_LIBS=-lncurses install
-mv -v /usr/lib/lib{readline,history}.so.* /lib
-ln -sfv ../../lib/$(readlink /usr/lib/libreadline.so)                    \
-        /usr/lib/libreadline.so
-ln -sfv ../../lib/$(readlink /usr/lib/libhistory.so )                    \
-        /usr/lib/libhistory.so
-# for documentation
-install -v -m644 doc/*.{ps,pdf,html,dvi} /usr/share/doc/readline-7.0
-cd ..
-rm -rf readline*/
-touch $BLOGDIR/readline1.txt
-fi
-
-#------------------------------------------------------------------------#
-#                                                                        #
 #                           Installing BASH.                             #
 #                                                                        #
 #------------------------------------------------------------------------#
 
 if [ ! -f $BLOGDIR/bash1.txt ]; then
 rm -rf bash*/
-tar xvzf bash*.gz
+bash extract.sh bash
 cd bash*/
+#TODO: replace "4.4" with glob pattern; don't assume there is a patch in
+#      new version-agnostic script
 patch -Np1 -i ../bash-4.4-upstream_fixes-1.patch
 ./configure --prefix=/usr                                                \
             --docdir=/usr/share/doc/bash-4.4                             \
@@ -906,35 +961,13 @@ fi
 
 #------------------------------------------------------------------------#
 #                                                                        #
-#                            Installing BC.                              #
-#                                                                        #
-#------------------------------------------------------------------------#
-
-if [ ! -f $BLOGDIR/bc1.txt ]; then
-rm -rf bc*/
-tar xvjf bc*.bz2
-cd bc*/
-patch -Np1 -i ../bc-1.06.95-memory_leak-1.patch
-./configure --prefix=/usr                                                \
-            --with-readline                                              \
-            --mandir=/usr/share/man                                      \
-            --infodir=/usr/share/info
-make
-make install
-cd ..
-rm -rf bc*/
-touch $BLOGDIR/bc1.txt
-fi
-
-#------------------------------------------------------------------------#
-#                                                                        #
 #                          Installing LIBTOOL.                           #
 #                                                                        #
 #------------------------------------------------------------------------#
 
 if [ ! -f $BLOGDIR/libtool1.txt ]; then
 rm -rf libtool*/
-tar xvJf libtool*.xz
+bash extract.sh libtool
 cd libtool*/
 ./configure --prefix=/usr
 make
@@ -952,7 +985,7 @@ fi
 
 if [ ! -f $BLOGDIR/gdbm1.txt ]; then
 rm -rf gdbm*/
-tar xvzf gdbm*.gz
+bash extract.sh gdbm
 cd gdbm*/
 ./configure --prefix=/usr                                                \
             --disable-static                                             \
@@ -972,9 +1005,10 @@ fi
 
 if [ ! -f $BLOGDIR/gperf1.txt ]; then
 rm -rf gperf*/
-tar xvzf gperf*.gz
+bash extract.sh gperf
 cd gperf*/
-./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.0.4
+#TODO: swap out "3.1" with glob pattern
+./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.1
 make
 make install
 cd ..
@@ -990,13 +1024,16 @@ fi
 
 if [ ! -f $BLOGDIR/expat1.txt ]; then
 rm -rf expat*/
-tar xvjf expat*.bz2
+bash extract.sh expat
 cd expat*/
+# fix a bug with regression tests
+sed -i 's|usr/bin/env |bin/|' run.sh.in
 ./configure --prefix=/usr --disable-static
 make
 make install
-install -v -dm755 /usr/share/doc/expat-2.2.0
-install -v -m644 doc/*.{html,png,css} /usr/share/doc/expat-2.2.0
+#TODO: replace "2.2.3" with glob pattern
+install -v -dm755 /usr/share/doc/expat-2.2.3
+install -v -m644 doc/*.{html,png,css} /usr/share/doc/expat-2.2.3
 cd ..
 rm -rf expat*/
 touch $BLOGDIR/expat1.txt
@@ -1010,7 +1047,7 @@ fi
 
 if [ ! -f $BLOGDIR/inetutils1.txt ]; then
 rm -rf inetutils*/
-tar xvJf inetutils*.xz
+bash extract.sh inetutils
 cd inetutils*/
 ./configure --prefix=/usr                                                \
             --localstatedir=/var                                         \
@@ -1038,7 +1075,7 @@ fi
 
 if [ ! -f $BLOGDIR/perl1.txt ]; then
 rm -rf perl*/
-tar xvjf perl*.bz2
+bash extract.sh perl
 cd perl*/
 echo "127.0.0.1 localhost $(hostname)" > /etc/hosts
 export BUILD_ZLIB=False
@@ -1060,13 +1097,13 @@ fi
 
 #------------------------------------------------------------------------#
 #                                                                        #
-#                         Installing XML-PARSER.                         #
+#                        Installing XML::PARSER.                         #
 #                                                                        #
 #------------------------------------------------------------------------#
 
 if [ ! -f $BLOGDIR/xml-parser1.txt ]; then
 rm -rf XML-Parser*/
-tar xvzf XML-Parser*.gz
+bash extract.sh XML-Parser
 cd XML-Parser*/
 perl Makefile.PL
 make
@@ -1084,7 +1121,7 @@ fi
 
 if [ ! -f $BLOGDIR/intltool1.txt ]; then
 rm -rf intltool*/
-tar xvzf intltool*.gz
+bash extract.sh intltool
 cd intltool*/
 # fix a warning coused by Perl 5.22 and later
 sed -i 's:\\\${:\\\$\\{:' intltool-update.in
@@ -1106,7 +1143,7 @@ fi
 
 if [ ! -f $BLOGDIR/autoconf1.txt ]; then
 rm -rf autoconf*/
-tar xvJf autoconf*.xz
+bash extract.sh autoconf
 cd autoconf*/
 ./configure --prefix=/usr
 make
@@ -1124,11 +1161,10 @@ fi
 
 if [ ! -f $BLOGDIR/automake1.txt ]; then
 rm -rf automake*/
-tar xvJf automake*.xz
+bash extract.sh automake
 cd automake*/
-# fix a warning caused by Perl 5.22 and later
-sed -i 's:/\\\${:/\\\$\\{:' bin/automake.in
-./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.15
+#TODO: replace "1.15.1" with glob pattern
+./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.15.1
 make
 sed -i "s:./configure:LEXLIB=/usr/lib/libfl.a &:"                        \
        t/lex-{clean,depend}-cxx.sh
@@ -1146,8 +1182,9 @@ fi
 
 if [ ! -f $BLOGDIR/xz1.txt ]; then
 rm -rf xz*/
-tar xvJf xz*.xz
+bash extract.sh xz
 cd xz*/
+#TODO: replace "5.2.3" with glob pattern
 ./configure --prefix=/usr                                                \
             --disable-static                                             \
             --docdir=/usr/share/doc/xz-5.2.3
@@ -1170,7 +1207,7 @@ fi
 
 if [ ! -f $BLOGDIR/kmod1.txt ]; then
 rm -rf kmod*/
-tar xvJf kmod*.xz
+bash extract.sh kmod
 cd kmod*/
 ./configure --prefix=/usr                                                \
             --bindir=/bin                                                \
@@ -1197,8 +1234,9 @@ fi
 
 if [ ! -f $BLOGDIR/gettext1.txt ]; then
 rm -rf gettext*/
-tar xvJf gettext*.xz
+bash extract.sh gettext
 cd gettext*/
+#TODO: replace version number with glob pattern
 # suppress things that could cause an infinite loop on accident
 sed -i '/^TESTS =/d' gettext-runtime/tests/Makefile.in &&
 sed -i 's/test-lock..EXEEXT.//' gettext-tools/gnulib-tests/Makefile.in
@@ -1221,7 +1259,7 @@ fi
 
 if [ ! -f $BLOGDIR/systemd1.txt ]; then
 rm -rf systemd*/
-tar xvJf systemd*.xz
+bash extract.sh systemd
 cd systemd*/
 # fix a build error when using util-linux
 sed -i "s:blkid/::" $(grep -rl "blkid/blkid.h")
@@ -1244,6 +1282,7 @@ cc_cv_CFLAGS__flto=no
 SULOGIN="/sbin/sulogin"
 XSLTPROC="/usr/bin/xsltproc"
 EOF
+#TODO: replace version number with glob pattern
 ./configure --prefix=/usr                                                \
             --sysconfdir=/etc                                            \
             --localstatedir=/var                                         \
@@ -1256,7 +1295,7 @@ EOF
             --disable-sysusers                                           \
             --without-python                                             \
             --with-default-dnssec=no                                     \
-            --docdir=/usr/share/doc/systemd-232
+            --docdir=/usr/share/doc/systemd-234
 make LIBRARY_PATH=/tools/lib
 make LD_LIBRARY_PATH=/tools/lib install
 # remove unnecessary directory
@@ -1281,8 +1320,9 @@ fi
 
 if [ ! -f $BLOGDIR/procps-ng1.txt ]; then
 rm -rf procps-ng*/
-tar xvJf procps-ng*.xz
+bash extract.sh procps-ng
 cd procps-ng*/
+#TODO: replace version number with glob pattern
 ./configure --prefix=/usr                                                \
             --exec-prefix=                                               \
             --libdir=/usr/lib                                            \
@@ -1309,7 +1349,7 @@ fi
 
 if [ ! -f $BLOGDIR/etwofsprogs1.txt ]; then
 rm -rf e2fsprogs*/
-tar xvzf e2fsprogs*.gz
+bash extract.sh e2fsprogs
 cd e2fsprogs*/
 mkdir build && cd build
 LIBS=-L/tools/lib                                                        \
@@ -1349,9 +1389,10 @@ fi
 
 if [ ! -f $BLOGDIR/coreutils1.txt ]; then
 rm -rf coreutils*/
-tar xvJf coreutils*.xz
+bash extract.sh coreutils
 cd coreutils*/
-patch -Np1 -i ../coreutils-8.26-i18n-1.patch
+#TODO: replace version number with glob pattern
+patch -Np1 -i ../coreutils-8.27-i18n-1.patch
 # suppress an infinite loop
 sed -i '/test.lock/s/^/#/' gnulib-tests/gnulib.mk
 FORCE_UNSAFE_CONFIGURE=1 ./configure                                     \
@@ -1379,7 +1420,7 @@ fi
 
 if [ ! -f $BLOGDIR/diffutils1.txt ]; then
 rm -rf diffutils*/
-tar xvJf diffutils*.xz
+bash extract.sh diffutils
 cd diffutils*/
 # allow all locales to be installed
 sed -i 's:= @mkdir_p@:= /bin/mkdir -p:' po/Makefile.in.in
@@ -1399,12 +1440,13 @@ fi
 
 if [ ! -f $BLOGDIR/gawk1.txt ]; then
 rm -rf gawk*/
-tar xvJf gawk*.xz
+bash extract.sh gawk
 cd gawk*/
 ./configure --prefix=/usr
 make
 make install
 # install the documentation
+#TODO: replace version number with glob pattern
 mkdir -v /usr/share/doc/gawk-4.1.4
 cp    -v doc/{awkforai.txt,*.{eps,pdf,jpg}} /usr/share/doc/gawk-4.1.4
 cd ..
@@ -1420,7 +1462,7 @@ fi
 
 if [ ! -f $BLOGDIR/findutils1.txt ]; then
 rm -rf findutils*/
-tar xvzf findutils*.gz
+bash extract.sh findutils
 cd findutils*/
 # suppress an infinite loop
 sed -i 's/test-lock..EXEEXT.//' tests/Makefile.in
@@ -1442,7 +1484,7 @@ fi
 
 if [ ! -f $BLOGDIR/groff1.txt ]; then
 rm -rf groff*/
-tar xvzf groff*.gz
+bash extract.sh groff
 cd groff*/
 # change page size to "A4" if you are in Europe
 PAGE=letter ./configure --prefix=/usr
@@ -1461,7 +1503,7 @@ fi
 
 if [ ! -f $BLOGDIR/grubtwo1.txt ]; then
 rm -rf grub*/
-tar xvJf grub*.xz
+bash extract.sh grub
 cd grub*/
 ./configure --prefix=/usr                                                \
             --sbindir=/sbin                                              \
@@ -1484,7 +1526,7 @@ fi
 
 if [ ! -f $BLOGDIR/less1.txt ]; then
 rm -rf less*/
-tar xvzf less*.gz
+bash extract.sh less
 cd less*/
 ./configure --prefix=/usr --sysconfdir=/etc
 make
@@ -1502,7 +1544,7 @@ fi
 
 if [ ! -f $BLOGDIR/gzip1.txt ]; then
 rm -rf gzip*/
-tar xvJf gzip*.xz
+bash extract.sh gzip
 cd gzip*/
 ./configure --prefix=/usr
 make
@@ -1521,7 +1563,7 @@ fi
 
 if [ ! -f $BLOGDIR/iproute1.txt ]; then
 rm -rf iproute*/
-tar xvJf iproute*.xz
+bash extract.sh iproute
 cd iproute*/
 # don't need arpd
 sed -i /ARPD/d Makefile
@@ -1530,7 +1572,8 @@ rm -v doc/arpd.sgml
 # disable module requiring iptables
 sed -i 's/m_ipt.o//' tc/Makefile
 make
-make DOCDIR=/usr/share/doc/iproute2-4.9.0 install
+#TODO: replace version number with glob pattern
+make DOCDIR=/usr/share/doc/iproute2-4.12.0 install
 cd ..
 rm -rf iproute*/
 touch $BLOGDIR/iproute1.txt
@@ -1545,8 +1588,9 @@ fi
 
 if [ ! -f $BLOGDIR/kbd1.txt ]; then
 rm -rf kbd*/
-tar xvJf kbd*.xz
+bash extract.sh kbd
 cd kbd*/
+#TODO: replace version number with glob pattern
 patch -Np1 -i ../kbd-2.0.4-backspace-1.patch
 sed -i 's/\(RESIZECONS_PROGS=\)yes/\1no/g' configure
 sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
@@ -1571,7 +1615,7 @@ fi
 
 if [ ! -f $BLOGDIR/libpipeline1.txt ]; then
 rm -rf libpipeline*/
-tar xvzf libpipeline*.gz
+bash extract.sh libpipeline
 cd libpipeline*/
 PKG_CONFIG_PATH=/tools/lib/pkgconfig ./configure --prefix=/usr
 make
@@ -1589,7 +1633,7 @@ fi
 
 if [ ! -f $BLOGDIR/make1.txt ]; then
 rm -rf make*/
-tar xvjf make*.bz2
+bash extract.sh make
 cd make*/
 ./configure --prefix=/usr
 make
@@ -1607,7 +1651,7 @@ fi
 
 if [ ! -f $BLOGDIR/patch1.txt ]; then
 rm -rf patch*/
-tar xvJf patch*.xz
+bash extract.sh patch
 cd patch*/
 ./configure --prefix=/usr
 make
@@ -1625,15 +1669,16 @@ fi
 
 if [ ! -f $BLOGDIR/dbus1.txt ]; then
 rm -rf dbus*/
-tar xvzf dbus*.gz
+bash extract.sh dbus
 cd dbus*/
+#TODO: replace version number with glob pattern
 ./configure --prefix=/usr                                                \
             --sysconfdir=/etc                                            \
             --localstatedir=/var                                         \
             --disable-static                                             \
             --disable-doxygen-docs                                       \
             --disable-xml-docs                                           \
-            --docdir=/usr/share/doc/dbus-1.10.14                         \
+            --docdir=/usr/share/doc/dbus-1.10.22                         \
             --with-console-auth-dir=/run/console
 make
 make install
@@ -1653,11 +1698,12 @@ fi
 
 if [ ! -f $BLOGDIR/util-linux1.txt ]; then
 rm -rf util-linux*/
-tar xvJf util-linux*.xz
+bash extract.sh util-linux
 cd util-linux*/
 mkdir -pv /var/lib/hwclock
+#TODO: replace version number with glob pattern
 ./configure ADJTIME_PATH=/var/lib/hwclock/adjtime                        \
-            --docdir=/usr/share/doc/util-linux-2.29.1                    \
+            --docdir=/usr/share/doc/util-linux-2.30.1                    \
             --disable-chfn-chsh                                          \
             --disable-login                                              \
             --disable-nologin                                            \
@@ -1666,8 +1712,7 @@ mkdir -pv /var/lib/hwclock
             --disable-runuser                                            \
             --disable-pylibmount                                         \
             --disable-static                                             \
-            --without-python                                             \
-            --enable-libmount-force-mountinfo
+            --without-python
 make
 make install
 cd ..
@@ -1683,8 +1728,9 @@ fi
 
 if [ ! -f $BLOGDIR/man-db1.txt ]; then
 rm -rf man-db*/
-tar xvJf man-db*.xz
+bash extract.sh man-db
 cd man-db*/
+#TODO: replace version number with glob pattern
 ./configure --prefix=/usr                                                \
             --docdir=/usr/share/doc/man-db-2.7.6.1                       \
             --sysconfdir=/etc                                            \
@@ -1710,13 +1756,14 @@ fi
 
 if [ ! -f $BLOGDIR/tar1.txt ]; then
 rm -rf tar*/
-tar xvJf tar*.xz
+bash extract.sh tar
 cd tar*/
 FORCE_UNSAFE_CONFIGURE=1                                                 \
 ./configure --prefix=/usr                                                \
             --bindir=/bin
 make
 make install
+#TODO: replace version number with glob pattern
 make -C doc install-html docdir=/usr/share/doc/tar-1.29
 cd ..
 rm -rf tar*/
@@ -1731,7 +1778,7 @@ fi
 
 if [ ! -f $BLOGDIR/texinfo1.txt ]; then
 rm -rf texinfo*/
-tar xvJf texinfo*.xz
+bash extract.sh texinfo
 cd texinfo*/
 ./configure --prefix=/usr --disable-static
 make
@@ -1756,7 +1803,7 @@ fi
 
 if [ ! -f $BLOGDIR/vim1.txt ]; then
 rm -rf vim*/
-tar xvjf vim*.bz2
+bash extract.sh vim
 cd vim*/
 echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
 ./configure --prefix=/usr
@@ -1768,7 +1815,8 @@ for L in  /usr/share/man/{,*/}man1/vim.1; do
     ln -sfv vim.1 $(dirname $L)/vi.1
 done
 # for consistent documentation
-ln -sfv ../vim/vim80/doc /usr/share/doc/vim-8.0.069
+#TODO: replace version number with glob pattern
+ln -sfv ../vim/vim80/doc /usr/share/doc/vim-8.0.586
 # for a more vi-like experience
 cat > /etc/vimrc << "EOF"
 " Begin /etc/vimrc

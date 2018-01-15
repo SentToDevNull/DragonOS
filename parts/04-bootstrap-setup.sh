@@ -17,7 +17,8 @@ set -e
 # use ANSI escape codes to colorize output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-NC='\033[0m' # No Color
+# revert to no color
+NC='\033[0m'
 
 # log directory for logs of build progress for pausing and resuming work
 mkdir -p $LFS/sources/buildlogs
@@ -33,7 +34,7 @@ cd $LFS/sources
 
 if [ ! -f $BLOGDIR/binutils1.txt ]; then
 rm -rf binutils*/
-tar xvjf binutils*.bz2
+bash extract.sh binutils
 cd binutils*/
 mkdir -v build && cd build
 ../configure --prefix=/tools                                             \
@@ -64,7 +65,7 @@ fi
 if [ ! -f $BLOGDIR/gcc1.txt ]; then
 rm -rf gcc*/
 # build GMP, MPFR, and MPC with GCC
-tar xvjf gcc*.bz2
+bash extract.sh gcc
 cd gcc*/
 tar -xf ../mpfr*.xz
 mv mpfr* mpfr
@@ -130,7 +131,7 @@ fi
 
 if [ ! -f $BLOGDIR/kernelheaders1.txt ]; then
 rm -rf linux*/
-tar xvJf linux*.xz
+bash extract.sh linux
 cd linux*/
 make mrproper
 # time to unpack linux headers to expose kernel API to glibc
@@ -149,14 +150,14 @@ fi
 
 if [ ! -f $BLOGDIR/glibc1.txt ]; then
 rm -rf glibc*/
-tar xvJf glibc*.xz
+bash extract.sh glibc
 cd glibc*/
 mkdir build && cd build
 ../configure                                                             \
       --prefix=/tools                                                    \
       --host=$LFS_TGT                                                    \
       --build=$(../scripts/config.guess)                                 \
-      --enable-kernel=2.6.32                                             \
+      --enable-kernel=3.2                                                \
       --with-headers=/tools/include                                      \
       libc_cv_forced_unwind=yes                                          \
       libc_cv_c_cleanup=yes
@@ -189,7 +190,7 @@ fi
 if [ ! -f $BLOGDIR/libstdcpp1.txt ]; then
 rm -rf gcc*/
 # libstdc++ is located within GCC sources
-tar xvjf gcc*.bz2
+bash extract.sh gcc
 cd gcc*/
 mkdir build && cd build
 ../libstdc++-v3/configure                                                \
@@ -199,7 +200,7 @@ mkdir build && cd build
     --disable-nls                                                        \
     --disable-libstdcxx-threads                                          \
     --disable-libstdcxx-pch                                              \
-    --with-gxx-include-dir=/tools/$LFS_TGT/include/c++/6.3.0
+    --with-gxx-include-dir=/tools/$LFS_TGT/include/c++/7.2.0
 make
 make install
 cd .. && rm -rf build
@@ -216,7 +217,7 @@ fi
 
 if [ ! -f $BLOGDIR/binutils2.txt ]; then
 rm -rf binutils*/
-tar xvjf binutils*.bz2
+bash extract.sh binutils
 cd binutils*/
 mkdir build && cd build
 CC=$LFS_TGT-gcc                                                          \
@@ -248,7 +249,7 @@ fi
 if [ ! -f $BLOGDIR/gcc2.txt ]; then
 rm -rf gcc*/
 # now we're finally going to compile a full gcc with the new headers
-tar xvjf gcc*.bz2
+bash extract.sh gcc
 cd gcc*/
 cat gcc/limitx.h gcc/glimits.h gcc/limity.h >                            \
   `dirname $($LFS_TGT-gcc -print-libgcc-file-name)`/include-fixed/limits.h
@@ -319,12 +320,13 @@ fi
 
 if [ ! -f $BLOGDIR/tcl-core1.txt ]; then
 rm -rf tcl*/
-tar xvzf tcl*.gz
+bash extract.sh tcl
 cd tcl*/
 cd unix
 ./configure --prefix=/tools
 make
 make install
+#TODO: replace "8.6" with glob pattern
 chmod -v u+w /tools/lib/libtcl8.6.so
 make install-private-headers
 ln -sv tclsh8.6 /tools/bin/tclsh
@@ -341,7 +343,7 @@ fi
 
 if [ ! -f $BLOGDIR/expect1.txt ]; then
 rm -rf expect*/
-tar xvzf expect*.gz
+bash extract.sh expect
 cd expect*/
 cp -v configure{,.orig}
 sed 's:/usr/local/bin:/bin:' configure.orig > configure
@@ -363,7 +365,7 @@ fi
 
 if [ ! -f $BLOGDIR/dejagnu1.txt ]; then
 rm -rf dejagnu*/
-tar xvzf dejagnu*.gz
+bash extract.sh dejagnu
 cd dejagnu*/
 ./configure --prefix=/tools
 make install
@@ -380,7 +382,7 @@ fi
 
 if [ ! -f $BLOGDIR/check1.txt ]; then
 rm -rf check*/
-tar xvzf check*.gz
+bash extract.sh check
 cd check*/
 PKG_CONFIG= ./configure --prefix=/tools
 make
@@ -398,10 +400,9 @@ fi
 
 if [ ! -f $BLOGDIR/ncurses1.txt ]; then
 rm -rf ncurses*/
-tar xvzf ncurses*.gz
+bash extract.sh ncurses
 cd ncurses*/
 sed -i s/mawk// configure #ensure it's using gawk instead
-
 ./configure --prefix=/tools                                              \
             --with-shared                                                \
             --without-debug                                              \
@@ -423,7 +424,7 @@ fi
 
 if [ ! -f $BLOGDIR/bash1.txt ]; then
 rm -rf bash*/
-tar xvzf bash*.gz
+bash extract.sh bash
 cd bash*/
 ./configure --prefix=/tools --without-bash-malloc # avoiding segfaults
 make
@@ -442,7 +443,7 @@ fi
 
 if [ ! -f $BLOGDIR/bison1.txt ]; then
 rm -rf bison*/
-tar xvJf bison*.xz
+bash extract.sh bison
 cd bison*/
 ./configure --prefix=/tools
 make
@@ -460,7 +461,7 @@ fi
 
 if [ ! -f $BLOGDIR/bziptwo1.txt ]; then
 rm -rf bzip2*/
-tar xvzf bzip2*.gz
+bash extract.sh bzip2
 cd bzip2*/
 make
 make PREFIX=/tools install
@@ -477,7 +478,7 @@ fi
 
 if [ ! -f $BLOGDIR/coreutils1.txt ]; then
 rm -rf coreutils*/
-tar xvJf coreutils*.xz
+bash extract.sh coreutils
 cd coreutils*/
 ./configure --prefix=/tools --enable-install-program=hostname
 make
@@ -495,7 +496,7 @@ fi
 
 if [ ! -f $BLOGDIR/diffutils1.txt ]; then
 rm -rf diffutils*/
-tar xvJf diffutils*.xz
+bash extract.sh diffutils
 cd diffutils*/
 ./configure --prefix=/tools
 make
@@ -513,7 +514,7 @@ fi
 
 if [ ! -f $BLOGDIR/file1.txt ]; then
 rm -rf file*/
-tar xvzf file*.gz
+bash extract.sh file
 cd file*/
 ./configure --prefix=/tools
 make
@@ -531,7 +532,7 @@ fi
 
 if [ ! -f $BLOGDIR/findutils1.txt ]; then
 rm -rf findutils*/
-tar xvzf findutils*.gz
+bash extract.sh findutils
 cd findutils*/
 ./configure --prefix=/tools
 make
@@ -549,7 +550,7 @@ fi
 
 if [ ! -f $BLOGDIR/gawk1.txt ]; then
 rm -rf gawk*/
-tar xvJf gawk*.xz
+bash extract.sh gawk
 cd gawk*/
 ./configure --prefix=/tools
 make
@@ -567,7 +568,7 @@ fi
 
 if [ ! -f $BLOGDIR/gettext1.txt ]; then
 rm -rf gettext*/
-tar xvJf gettext*.xz
+bash extract.sh gettext
 cd gettext*/
 cd gettext-tools
 EMACS="no" ./configure --prefix=/tools --disable-shared
@@ -590,7 +591,7 @@ fi
 
 if [ ! -f $BLOGDIR/grep1.txt ]; then
 rm -rf grep*/
-tar xvJf grep*.xz
+bash extract.sh grep
 cd grep*/
 ./configure --prefix=/tools
 make
@@ -608,7 +609,7 @@ fi
 
 if [ ! -f $BLOGDIR/gzip1.txt ]; then
 rm -rf gzip*/
-tar xvJf gzip*.xz
+bash extract.sh gzip
 cd gzip*/
 ./configure --prefix=/tools
 make
@@ -626,7 +627,7 @@ fi
 
 if [ ! -f $BLOGDIR/mfour1.txt ]; then
 rm -rf m4*/
-tar xvJf m4*.xz
+bash extract.sh m4
 cd m4*/
 ./configure --prefix=/tools
 make
@@ -644,7 +645,7 @@ fi
 
 if [ ! -f $BLOGDIR/make1.txt ]; then
 rm -rf make*/
-tar xvjf make*.bz2
+bash extract.sh make
 cd make*/
 ./configure --prefix=/tools --without-guile
 make
@@ -662,7 +663,7 @@ fi
 
 if [ ! -f $BLOGDIR/patch1.txt ]; then
 rm -rf patch*/
-tar xvJf patch*.xz
+bash extract.sh patch
 cd patch*/
 ./configure --prefix=/tools
 make
@@ -680,13 +681,17 @@ fi
 
 if [ ! -f $BLOGDIR/perl1.txt ]; then
 rm -rf perl*/
-tar xvjf perl*.bz2
+bash extract.sh perl
 cd perl*/
+sed -e '9751 a#ifndef PERL_IN_XSUB_RE'                                   \
+    -e '9808 a#endif'                                                    \
+    -i regexec.c
 sh Configure -des -Dprefix=/tools -Dlibs=-lm
 make
 cp -v perl cpan/podlators/scripts/pod2man /tools/bin
-mkdir -pv /tools/lib/perl5/5.24.1
-cp -Rv lib/* /tools/lib/perl5/5.24.1
+#TODO: use glob pattern instead of "5.26.0"
+mkdir -pv /tools/lib/perl5/5.26.0
+cp -Rv lib/* /tools/lib/perl5/5.26.0
 cd ..
 rm -rf perl*/
 touch $BLOGDIR/perl1.txt
@@ -700,7 +705,7 @@ fi
 
 if [ ! -f $BLOGDIR/sed1.txt ]; then
 rm -rf sed*/
-tar xvJf sed*.xz
+bash extract.sh sed
 cd sed*/
 ./configure --prefix=/tools
 make
@@ -718,7 +723,7 @@ fi
 
 if [ ! -f $BLOGDIR/tar1.txt ]; then
 rm -rf tar*/
-tar xvJf tar*.xz
+bash extract.sh tar
 cd tar*/
 ./configure --prefix=/tools
 make
@@ -736,7 +741,7 @@ fi
 
 if [ ! -f $BLOGDIR/texinfo1.txt ]; then
 rm -rf texinfo*/
-tar xvJf texinfo*.xz
+bash extract.sh texinfo
 cd texinfo*/
 ./configure --prefix=/tools
 make
@@ -754,13 +759,13 @@ fi
 
 if [ ! -f $BLOGDIR/util-linux1.txt ]; then
 rm -rf util-linux*/
-tar xvJf util-linux*.xz
+bash extract.sh util-linux
 cd util-linux*/
 ./configure --prefix=/tools                                              \
             --without-python                                             \
             --disable-makeinstall-chown                                  \
             --without-systemdsystemunitdir                               \
-            --enable-libmount-force-mountinfo                            \
+            --without-ncurses                                            \
             PKG_CONFIG=""
 make
 make install
@@ -777,7 +782,7 @@ fi
 
 if [ ! -f $BLOGDIR/xz1.txt ]; then
 rm -rf xz*/
-tar xvJf xz*.xz
+bash extract.sh xz
 cd xz*/
 ./configure --prefix=/tools
 make

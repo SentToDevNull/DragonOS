@@ -131,7 +131,7 @@ fi
 
 if [ ! -f $BLOGDIR/openssl1.txt ]; then
 rm -rf openssl*/
-tar xvzf openssl*.gz
+bash extract.sh openssl
 cd openssl*/
 ./config --prefix=/usr                                                   \
          --openssldir=/etc/ssl                                           \
@@ -158,11 +158,13 @@ fi
 
 if [ ! -f $BLOGDIR/linuxkernel1.txt ]; then
 rm -rf linux*/
-tar xvJf linux*.xz
+bash extract.sh linux
 cd linux*/
 make mrproper
-# copying over my kernel config file
+## copying over my kernel config file
 cp -v /sources/kernelconfig.txt .config
+##creating a config file yourself
+#make menuconfig
 make
 make modules_install
 cp -v arch/x86/boot/bzImage /boot/vmlinuz-systemd
@@ -191,19 +193,20 @@ fi
 
 if [ ! -f $BLOGDIR/buildstagetwoconfigure2.txt ]; then
 # this file is required by systemd
+#TODO: replace version number with a variable
 cat > /etc/os-release << "EOF"
 NAME="DragonOS"
-VERSION="0.1.1"
+VERSION="0.2.1"
 ID=pos
-PRETTY_NAME="DragonOS 0.1.1"
+PRETTY_NAME="DragonOS 0.2.1"
 VERSION_CODENAME="Fledgeling"
 EOF
 # for LSB compliance
 cat > /etc/lsb-release << "EOF"
 DISTRIB_ID="DragonOS"
-DISTRIB_RELEASE="0.1.1"
+DISTRIB_RELEASE="0.2.1"
 DISTRIB_CODENAME="Fledgeling"
-DISTRIB_DESCRIPTION="DragonOS 0.1.1"
+DISTRIB_DESCRIPTION="DragonOS 0.2.1"
 EOF
 touch $BLOGDIR/buildstagetwoconfigure2.txt
 fi
