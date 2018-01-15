@@ -14,7 +14,7 @@ set -e
 #                                                                        #
 #------------------------------------------------------------------------#
 
-BASH_MIN=3.2a
+BASH_MIN=3.2
 BINUTILS_MIN=2.17
 BISON_MIN=2.3
 BZIPTWO_MIN=1.0.4
@@ -27,7 +27,7 @@ GPLUSPLUS_MIN=4.7
 GLIBC_MIN=2.11
 GREP_MIN=2.5.1a
 GZIP_MIN=1.3.12
-LINUX_MIN=2.6.32
+LINUX_MIN=3.2
 MFOUR_MIN=1.4.10
 MAKE_MIN=3.81
 PATCH_MIN=2.5.4
@@ -365,5 +365,5 @@ rm -f dummy.c dummy
 # Writes the file that will be read to determine if build should happen. #
 #                                                                        #
 #------------------------------------------------------------------------#
-exit 1
+#exit 1
 touch logs/01-checker-finished.txt
