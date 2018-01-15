@@ -6,7 +6,7 @@
 #      .-._
 #       \  '-._
 #  ______/___  '.
-# `'--.___  _\  /        DragonOS Builder, Version 0.1.1
+# `'--.___  _\  /        DragonOS Builder, Version 0.2.1
 #      /_.-' _\ \ _:,_
 #    .'__ _.' \'-/,`-~`
 #       '. ___.> /=,                                          ,  ,
@@ -18,7 +18,7 @@
 #                                                          ,'    \)|\ `\|
 #                                                                " ||   (   
 #                                                                   /    
-VERSION=0.1.1                                                            
+VERSION=0.2.1                                                            
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 ##########################################################################
 
@@ -96,6 +96,7 @@ function BOOTSTRAPSETUP {
 cp parts/04-bootstrap-setup.sh $LFS
 chown -v lfs /mnt/lfs/tools
 chown -v lfs /mnt/lfs/sources
+cp parts/extract.sh $LFS/sources/
 time su lfs -c /bin/bash << "EOF"
 exec env HOME=$HOME TERM=$TERM PS1='\u:\w\$ ' LFS=/mnt/lfs LC_ALL=POSIX  \
   LFS_TGT=$(uname -m)-lfs-linux-gnu PATH=/tools/bin:/bin:/usr/bin bash   \
@@ -148,6 +149,7 @@ rm $LFS/07-stage-two.sh
 # copying over finished status from chroot directory
 cp $LFS/sources/buildlogs/07-buildparttwo-finished.txt                   \
    logs/07-buildparttwo-finished.txt
+rm $LFS/sources/extract.sh
 }
 
 #------------------------------------------------------------------------#
