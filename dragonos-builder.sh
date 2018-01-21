@@ -16,9 +16,9 @@
 #              '=='                                    _,:__.-"/---\_ \
 #                                                     '~-'--.)__( , )\ \
 #                                                          ,'    \)|\ `\|
-#                                                                " ||   (   
-#                                                                   /    
-VERSION=0.2.1                                                            
+#                                                                " ||   (
+#                                                                   /
+VERSION=0.2.1
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 ##########################################################################
 
@@ -36,7 +36,7 @@ chmod -R +x parts dragonos-builder.sh
 #                                                                        #
 #------------------------------------------------------------------------#
 
-export LFS=/mnt/lfs/
+export LFS=$(pwd)/sysbuild
 export WORDIR=`pwd`
 THREADS=$(cat /proc/cpuinfo | grep processor | wc -l)
 export MAKEFLAGS="-j $THREADS"
@@ -94,13 +94,13 @@ time bash parts/03-setup-lfs.sh
 
 function BOOTSTRAPSETUP {
 cp parts/04-bootstrap-setup.sh $LFS
-chown -v lfs /mnt/lfs/tools
-chown -v lfs /mnt/lfs/sources
+chown -v lfs $LFS/tools
+chown -v lfs $LFS/sources
 cp parts/extract.sh $LFS/sources/
 time su lfs -c /bin/bash << "EOF"
-exec env HOME=$HOME TERM=$TERM PS1='\u:\w\$ ' LFS=/mnt/lfs LC_ALL=POSIX  \
+exec env HOME=$HOME TERM=$TERM PS1='\u:\w\$ ' LFS=$LFS LC_ALL=POSIX      \
   LFS_TGT=$(uname -m)-lfs-linux-gnu PATH=/tools/bin:/bin:/usr/bin bash   \
-  /mnt/lfs/04-bootstrap-setup.sh
+  $LFS/04-bootstrap-setup.sh
 EOF
 rm -f $LFS/04-bootstrap-setup.sh
 }
@@ -173,7 +173,7 @@ losetup -d /dev/loop0 2>/dev/null
 partprobe
 userdel lfs 2>/dev/null
 rm -rf /home/lfs/
-rm -rf /mnt/lfs/
+rm -rf $LFS
 # show completion status of this step
 touch logs/finalize-finished.txt
 }
@@ -196,35 +196,35 @@ time bash parts/08-newdisk.sh
 #------------------------------------------------------------------------#
 
 function NEWGRUBINSTALL {
-mkdir -p /mnt/lfs
+mkdir -p $LFS
 losetup /dev/loop0 disk.img
 partprobe /dev/loop0
-umount /mnt/lfs 2>/dev/null
-mount /dev/loop0p1 /mnt/lfs
-rm -f /mnt/09-newgrubinstall.sh
+umount $LFS 2>/dev/null
+mount /dev/loop0p1 $LFS
+rm -f $LFS/09-newgrubinstall.sh
 if [ -z $(which grub-install 2>/dev/null) ]
-  then grub2-install --boot-directory /mnt/lfs/boot/ /dev/loop0
-  else grub-install --boot-directory /mnt/lfs/boot/ /dev/loop0
+  then grub2-install --boot-directory $LFS/boot/ /dev/loop0
+  else grub-install --boot-directory $LFS/boot/ /dev/loop0
 fi
-cp parts/09-newgrubinstall.sh /mnt/lfs/
-time chroot "/mnt/lfs" /usr/bin/env -i HOME=/root TERM=$TERM             \
+cp parts/09-newgrubinstall.sh $LFS
+time chroot "$LFS" /usr/bin/env -i HOME=/root TERM=$TERM                 \
   PS1='\u:\w\$ ' PATH=/bin:/usr/bin:/sbin:/usr/sbin /bin/bash << "EOF"
 bash /09-newgrubinstall.sh
 EOF
 # removing the newgrubinstall script
 rm -rf $LFS/09-newgrubinstall.sh
-echo debug1
+
 # copying over finished status from chroot directory
 mv $LFS/sources/buildlogs/09-newgrubinstall-finished.txt                 \
    logs/09-newgrubinstall-finished.txt
-echo debug2
+
 # remove the sources from the image
 rm -rf $LFS/sources/
-echo debug3
+
+# unmount the image and destroy the loopback device
 umount /dev/loop0p1
-echo debug4
 losetup -d /dev/loop0
-echo debug5
+
 }
 
 #------------------------------------------------------------------------#

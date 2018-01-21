@@ -37,7 +37,8 @@ mkfs.ext4 -L DragonOS /dev/loop0p1
 
 # make a place to build the new system; this directory will be the mount
 #   point for the new operating system's partition
-export LFS=/mnt/lfs
+export LFS=$(pwd)/sysbuild
+echo $LFS
 mkdir -p $LFS
 # now mount the new filesystem at the aforementioned mount point
 mount -t ext4 /dev/loop0p1 $LFS
@@ -49,8 +50,9 @@ mount -t ext4 /dev/loop0p1 $LFS
 #------------------------------------------------------------------------#
 
 # making and entering package cache directory
-mkdir -p cache/meta/changes.d
+mkdir -p cache/meta/changes.d/
 cp -r parts/packagemods/* cache/meta/changes.d/
+mkdir -p cache/meta/changes.d/{replacements,additions,patches}
 cd cache
 # make sure the package list exists and download it if not
 if [ ! -f meta/package-list ]; then
@@ -60,22 +62,21 @@ fi
 
 # adding package replacements to the package set
 IFS=$'\n'
-for f in $(find meta/changes.d/replacements/*); do
+for f in $(find meta/changes.d/replacements/ -type f); do
   PKG_REGEX=$(cat "$f" | head -n3 | tail -n1)
   PKG_URL=$(cat "$f" | head -n7 | tail -n1 | sed "s,\:,\\\:,g" |
             sed "s,\/,\\\\\/,g" | sed "s,\.,\\\.,g" | sed "s,\-,\\\-,g")
   sed -i "s,$PKG_REGEX,$PKG_URL,g" meta/package-list
-done 
+done
 unset IFS PKG_REGEX PKG_URL
-
 
 # adding package additions to the package set
 IFS=$'\n'
-for f in $(find meta/changes.d/additions/*); do
+for f in $(find meta/changes.d/additions/ -type f); do
   echo "$f"
   PKG_URL=$(cat "$f" | head -n3 | tail -n1)
   echo $PKG_URL >> meta/package-list
-done 
+done
 unset IFS PKG_URL
 
 # make sure packages are saved in the cache and download them if not
@@ -96,20 +97,24 @@ fi
 
 # adding package replacements to the package checksum set
 IFS=$'\n'
-for f in $(find meta/changes.d/replacements/*); do
+for f in $(find meta/changes.d/replacements/ -type f); do
+
   PKG_REGEX=$(cat "$f" | head -n3 | tail -n1)
   PKG_MD5=$(cat "$f" | head -n11 | tail -n1 | sed "s,\:,\\\:,g" |
             sed "s,\/,\\\\\/,g" | sed "s,\.,\\\.,g" | sed "s,\-,\\\-,g")
   sed -i "s,$PKG_REGEX,$PKG_MD5,g" meta/md5sums
-done 
+
+done
 unset IFS PKG_REGEX PKG_MD5
 
 # adding package additions to the package checksum set
 IFS=$'\n'
-for f in $(find meta/changes.d/additions/*); do
+for f in $(find meta/changes.d/additions/ -type f); do
+
   PKG_MD5=$(cat "$f" | head -n7 | tail -n1)
   echo $PKG_MD5 >> meta/md5sums
-done 
+
+done
 unset IFS PKG_MD5
 
 # check md5sums and keep redownloading packages until none are corrupt
@@ -126,7 +131,8 @@ done
 
 # downloading patches and check patch checksums
 IFS=$'\n'
-for f in $(find meta/changes.d/patches/*); do
+for f in $(find meta/changes.d/patches/ -type f); do
+
   echo "$f"
   PATCH_URL=$(cat "$f" | head -n3 | tail -n1)
   wget $PATCH_URL
@@ -148,20 +154,24 @@ for f in $(find meta/changes.d/patches/*); do
   if [ $(wc -l "$f" | sed "s, \(.*\),,g") == 15 ]; then
     eval $(cat "$f" | head -n15 | tail -n1)
   fi
-done 
+
+done
 unset IFS PATCH_URL PATCH_MD5 PATCH_OLDNAME PATCH_NEWNAME
+
+# exit the package cache directory
+cd ..
 
 # create directory to unpack sources, build them, and store tarballs and
 #   patches
 mkdir -p $LFS/sources
+
 # make the sources directory sticky so that out of all users who have
 #   write permissions to the directory, only the owner of a file can
 #   delete it
 chmod a+wt $LFS/sources
+
 # copy all packages and patches over to the new system's sources directory
-cp -r * $LFS/sources 2>/dev/null
-# exit the package cache directory
-cd ..
+cp -r cache/* $LFS/sources
 
 #------------------------------------------------------------------------#
 #                                                                        #
@@ -173,7 +183,8 @@ cd ..
 
 # make a separate directory for tools needed to bootstrap the system
 mkdir -p $LFS/tools
-# create a symlink to tools; this makes /tools point to /mnt/lfs/tools
+
+# create a symlink to tools; this makes /tools point to sysbuild/tools
 ln -sf $LFS/tools /
 
 #------------------------------------------------------------------------#

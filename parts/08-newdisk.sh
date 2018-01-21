@@ -10,13 +10,13 @@
 losetup /dev/loop0 disk.img
 partprobe /dev/loop0
 # creating working directories
-mkdir -p /mnt/old /mnt/new
-# mounting the old disk at '/mnt/old'
-mount /dev/loop0p1 /mnt/old
+mkdir -p sys-old sys-new
+# mounting the old disk at 'sys-old'
+mount /dev/loop0p1 sys-old
 
 # for determining what to resize the filesystem to; outputs space used in
 #   GB (G), rounding up, and adds 1 to it
-GBNEEDED=$(($(df -BG /mnt/old | awk '{if ($1 != "Filesystem") print $3}' |
+GBNEEDED=$(($(df -BG sys-old | awk '{if ($1 != "Filesystem") print $3}' |
               tr "G" " ") + 1))
 
 #------------------------------------------------------------------------#
@@ -42,10 +42,10 @@ parted -s /dev/loop1 set 1 boot on
 mkfs.ext4 -L DragonOS /dev/loop1p1
 # ensure all write operations are complete
 sync
-# mount the new disk at '/mnt/new' and copy all files and permissions from
+# mount the new disk at 'sys-new' and copy all files and permissions from
 #   the old disk over to it
-mount /dev/loop1p1 /mnt/new/
-cp -rp /mnt/old/* /mnt/new/
+mount /dev/loop1p1 sys-new/
+cp -rp sys-old/* sys-new/
 
 #------------------------------------------------------------------------#
 #                                                                        #
@@ -60,7 +60,7 @@ umount /dev/loop1p1
 losetup -d /dev/loop0
 losetup -d /dev/loop1
 # removing the working directories
-rm -rf /mnt/old /mnt/new
+rm -rf sys-old sys-new
 # remove the old disk
 rm -f disk.img
 # ensure all write operations are complete
