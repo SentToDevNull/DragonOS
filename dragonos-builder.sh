@@ -203,8 +203,10 @@ umount $LFS 2>/dev/null
 mount /dev/loop0p1 $LFS
 rm -f $LFS/09-newgrubinstall.sh
 if [ -z $(which grub-install 2>/dev/null) ]
-  then grub2-install --boot-directory $LFS/boot/ /dev/loop0
-  else grub-install --boot-directory $LFS/boot/ /dev/loop0
+  then grub2-install --target i386-pc --boot-directory $LFS/boot/        \
+                     /dev/loop0
+  else grub-install --target i386-pc --boot-directory $LFS/boot/         \
+                     /dev/loop0
 fi
 cp parts/09-newgrubinstall.sh $LFS
 time chroot "$LFS" /usr/bin/env -i HOME=/root TERM=$TERM                 \
