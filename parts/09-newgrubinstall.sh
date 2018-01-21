@@ -29,7 +29,7 @@ set timeout=5
 insmod ext2
 set root=(hd0,1)
 menuentry "DragonOS 0.1.1" {
-  linux /boot/vmlinuz-systemd root=/dev/sda1 ro quiet
+  linux /boot/vmlinuz-systemd root=/dev/sda1 ro quiet rootfstype=ext4
 }
 EOF
 else cat > /boot/grub/grub.cfg << "EOF"
@@ -39,7 +39,7 @@ set timeout=5
 insmod ext2
 set root=(hd0,1)
 menuentry "DragonOS 0.1.1" {
-  linux /boot/vmlinuz-systemd root=/dev/sda1 ro quiet
+  linux /boot/vmlinuz-systemd root=/dev/sda1 ro quiet rootfstype=ext4
 }
 EOF
 fi
