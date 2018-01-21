@@ -2,7 +2,7 @@
 
 This script builds the target system in its working directory. Before
 running it, make sure that any user can access the build directory. It is
-recommended that you `chmod 777 /opt/` clone this repository into /opt/,
+recommended that you `chmod 777 /opt/`, clone this repository into /opt/,
 and build from there.
 
 ## TODO
