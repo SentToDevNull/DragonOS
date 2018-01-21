@@ -56,7 +56,7 @@ mkdir -p cache/meta/changes.d/{replacements,additions,patches}
 cd cache
 # make sure the package list exists and download it if not
 if [ ! -f meta/package-list ]; then
-  wget http://www.linuxfromscratch.org/lfs/view/stable-systemd/wget-list \
+  wget http://www.linuxfromscratch.org/lfs/downloads/8.1-systemd/wget-list \
        -O meta/package-list
 fi
 
