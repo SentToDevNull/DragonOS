@@ -1,4 +1,30 @@
 #!/bin/bash
+#
+# DragonOS
+#
+# MIT License
+#
+# Copyright (c) 2020 Lukas Yoder <lukas@lukasyoder.com>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
 
 #------------------------------------------------------------------------#
 #                                                                        #
@@ -193,7 +219,7 @@ cd glibc*/
 # applying patch
 #TODO: replace "2.26" with glob pattern
 patch -Np1 -i ../glibc-2.26-fhs-1.patch
-# making a symlink for LSB compliance and a compatibility symlink for 
+# making a symlink for LSB compliance and a compatibility symlink for
 #   x86_64
 case $(uname -m) in
   x86) ln -fs ld-linux.so.2 /lib/ld-lsb.so.3
@@ -677,7 +703,7 @@ make distclean
             --without-normal                                             \
             --without-debug                                              \
             --without-cxx-binding                                        \
-            --with-abi-version=5 
+            --with-abi-version=5
 make sources libs
 #TODO: perhaps place glob pattern earlier by removing the 5
 cp -av lib/lib*.so.5* /usr/lib
